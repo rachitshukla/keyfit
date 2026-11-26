@@ -1,0 +1,20 @@
+name: Build KeyFit
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        runner: [macos-15-intel, macos-26]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: make package
+      - uses: actions/upload-artifact@v4
+        if: matrix.runner == 'macos-26'
+        with:
+          name: KeyFit-universal
+          path: build/KeyFit-universal.zip
