@@ -10,9 +10,9 @@ FRAMEWORKS := -framework AppKit -framework Carbon -framework ApplicationServices
 .PHONY: all test package
 all: $(STAMP)
 
-$(BIN): KeyFit.m Layout.h Makefile
+$(BIN): KeyFit.m Layout.h PermissionSetup.m PermissionSetup.h Makefile
 	mkdir -p "$(@D)"
-	xcrun clang $(CFLAGS) $(ARCHS) -Wl,-dead_strip -o "$@" KeyFit.m $(FRAMEWORKS)
+	xcrun clang $(CFLAGS) $(ARCHS) -Wl,-dead_strip -o "$@" KeyFit.m PermissionSetup.m $(FRAMEWORKS)
 	xcrun strip -x "$@"
 
 $(PLIST): Info.plist
@@ -33,11 +33,16 @@ build/test-layout: tests/layout.m Layout.h Makefile
 	mkdir -p "$(@D)"
 	xcrun clang $(CFLAGS) $(ARCHS) -o "$@" "$<" -framework AppKit
 
-test: all build/test-layout
+build/test-permission: tests/permission.m PermissionSetup.m PermissionSetup.h Makefile
+	mkdir -p "$(@D)"
+	xcrun clang $(CFLAGS) $(ARCHS) -o "$@" "$<" PermissionSetup.m $(FRAMEWORKS)
+
+test: all build/test-layout build/test-permission
 	xcrun lipo "$(BIN)" -verify_arch arm64 x86_64
 	plutil -lint "$(PLIST)"
 	codesign --verify --strict --all-architectures "$(APP)"
 	./build/test-layout
+	./build/test-permission
 
 package: test
 	ditto -c -k --keepParent --norsrc "$(APP)" build/KeyFit-universal.zip

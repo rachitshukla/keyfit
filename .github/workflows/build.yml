@@ -10,11 +10,34 @@ jobs:
       matrix:
         runner: [macos-15-intel, macos-26]
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - run: make package
-      - uses: actions/upload-artifact@v4
-        if: matrix.runner == 'macos-26'
+
+  source-release:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
         with:
-          name: KeyFit-universal
-          path: build/KeyFit-universal.zip
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Publish the tested source for an unreleased version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version=$(python3 -c 'import plistlib; print(plistlib.load(open("Info.plist","rb"))["CFBundleShortVersionString"])')
+          [[ "$version" =~ ^[0-9]+(\.[0-9]+){1,2}$ ]]
+          tag="v$version"
+          notes="releases/$tag.md"
+          [[ -f "$notes" ]] || exit 0
+          if gh release view "$tag" >/dev/null 2>&1; then exit 0; fi
+          if git show-ref --verify --quiet "refs/tags/$tag"; then
+            [[ "$(git rev-list -n1 "$tag")" == "$GITHUB_SHA" ]]
+          fi
+          gh release create "$tag" --target "$GITHUB_SHA" --title "KeyFit $version" --notes-file "$notes"

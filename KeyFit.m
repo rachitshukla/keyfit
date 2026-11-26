@@ -2,6 +2,7 @@
 #import <Carbon/Carbon.h>
 
 #import "Layout.h"
+#import "PermissionSetup.h"
 
 static const OSType signature = 'KFit';
 
@@ -120,8 +121,7 @@ static void showError(NSString *message) {
 
 int main(void) {
     @autoreleasepool {
-        NSDictionary *options = @{(__bridge NSString *)kAXTrustedCheckOptionPrompt: @YES};
-        if (!AXIsProcessTrustedWithOptions((__bridge CFDictionaryRef)options)) return 0;
+        if (!KeyFitCheckPermission(AXIsProcessTrusted)) return 0;
 
         EventTypeSpec type = {kEventClassKeyboard, kEventHotKeyPressed};
         if (InstallApplicationEventHandler(&pressed, 1, &type, NULL, NULL) != noErr) {
